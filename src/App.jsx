@@ -1434,7 +1434,13 @@ export default function SogecaDashboard() {
         {/* KPI */}
         <div className="mb-4 grid grid-cols-1 gap-3 sm:grid-cols-4">
           <KpiCard icon={FileText} label="Clients actifs" value={globalStats.totalDossiers} sub={globalStats.nonAssignes > 0 ? `${globalStats.nonAssignes} non assigné(s)` : "Tous assignés"} />
-          <KpiCard icon={Wallet} label="Total honoraires" value={eurK(globalStats.totalCA)} sub={eur(globalStats.totalCA)} accent={C.gold} />
+          <KpiCard
+  icon={Wallet}
+  label="Total honoraires (avec prospects)"
+  value={eurK(globalStats.totalCA + pipeline.caProspects)}
+  sub={`${eur(globalStats.totalCA)} portefeuille + ${eur(pipeline.caProspects)} prospects`}
+  accent={C.gold}
+/>
           <KpiCard icon={TrendingUp} label="CA moyen / client" value={eurK(globalStats.caMoyen)} />
           <KpiCard icon={MapPin} label="Répartition sites" value={`${Math.round((globalStats.bySite.DAX / globalStats.totalCA) * 100)}% / ${Math.round((globalStats.bySite.MIMIZAN / globalStats.totalCA) * 100)}%`} sub="DAX / MIMIZAN" />
         </div>
