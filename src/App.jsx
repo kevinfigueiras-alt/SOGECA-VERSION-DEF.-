@@ -2028,6 +2028,14 @@ export default function SogecaDashboard() {
             <Plus size={16} /> Nouveau prospect
           </button>
         </div>
+        <div className="mb-4 grid grid-cols-1 gap-3 sm:grid-cols-4">
+          <KpiCard icon={Target} label="Prospects en cours" value={pipeline.nbProspects} />
+          <KpiCard icon={Wallet} label="Total honoraires estimés" value={eurK(pipeline.caProspects)} sub={eur(pipeline.caProspects)} accent={C.gold} />
+          <KpiCard icon={MapPin} label="dont SOGECA DAX" value={eurK(pipeline.bySite.DAX)} sub={eur(pipeline.bySite.DAX)} accent={C.dax} />
+          <KpiCard icon={MapPin} label="dont SOGECA MIMIZAN" value={eurK(pipeline.bySite.MIMIZAN)}
+            sub={pipeline.bySite["Non affecté"] ? `+ ${eur(pipeline.bySite["Non affecté"])} non affecté` : eur(pipeline.bySite.MIMIZAN)}
+            accent={C.mimizan} />
+        </div>
 
         <div className="overflow-x-auto rounded-md" style={{ background: C.surface, border: `1px solid ${C.border}` }}>
           <table className="w-full min-w-[920px] border-collapse">
@@ -2083,6 +2091,19 @@ export default function SogecaDashboard() {
                 </td></tr>
               )}
             </tbody>
+            {prospects && prospects.length > 0 && (
+              <tfoot>
+                <tr style={{ background: C.bg, borderTop: `2px solid ${C.border}` }}>
+                  <td colSpan={4} className="px-3 py-2.5 text-[13px] font-semibold" style={{ color: C.text }}>
+                    Total ({prospects.length} prospect{prospects.length > 1 ? "s" : ""})
+                  </td>
+                  <td className="px-3 py-2.5 text-right tabular-nums text-[14px] font-bold" style={{ color: C.navy }}>
+                    {eur(pipeline.caProspects)}
+                  </td>
+                  <td colSpan={2}></td>
+                </tr>
+              </tfoot>
+            )}
           </table>
         </div>
       </main>
