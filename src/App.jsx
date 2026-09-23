@@ -1354,7 +1354,7 @@ export default function SogecaDashboard() {
               color: tab === "prospects" ? "#FFFFFF" : "#AEB8D4",
               borderBottom: tab === "prospects" ? `2px solid ${C.gold}` : "2px solid transparent",
             }}>
-            <Target size={14} /> Prospects {prospects && prospects.length > 0 && `(${prospects.length})`} {!advancedUnlocked && <Lock size={11} />}
+            <Target size={14} /> Prospects {prospects && prospects.length > 0 && `(${prospects.length})`} 
           </button>
           <button onClick={() => goToTab("primes")}
             className="flex items-center gap-1.5 px-4 py-2.5 text-[13px] font-medium"
