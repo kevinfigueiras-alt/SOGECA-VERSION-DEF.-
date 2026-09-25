@@ -16,7 +16,7 @@ const C = {
   goldText: "#233368", // texte lisible sur fond menthe
   bg: "#F2F4F9",
   surface: "#FFFFFF",
-  border: "#E1E4EE",            <LayoutDashboard size={14} /> CA théorique
+  border: "#E1E4EE",
   text: "#1B2545",
   muted: "#5C6584",
   mutedLight: "#8E96B3",
@@ -1384,7 +1384,7 @@ export default function SogecaDashboard() {
               color: tab === "dashboard" ? "#FFFFFF" : "#AEB8D4",
               borderBottom: tab === "dashboard" ? `2px solid ${C.gold}` : "2px solid transparent",
             }}>
-            <LayoutDashboard size={14} /> Tableau de bord
+            <LayoutDashboard size={14} /> Chiffre d'affaires Théorique 
                       <button onClick={() => goToTab("caexercice")}
             className="flex items-center gap-1.5 px-4 py-2.5 text-[13px] font-medium"
             style={{
