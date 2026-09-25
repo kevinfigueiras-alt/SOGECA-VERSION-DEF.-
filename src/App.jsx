@@ -16,7 +16,7 @@ const C = {
   goldText: "#233368", // texte lisible sur fond menthe
   bg: "#F2F4F9",
   surface: "#FFFFFF",
-  border: "#E1E4EE",
+  border: "#E1E4EE",            <LayoutDashboard size={14} /> CA théorique
   text: "#1B2545",
   muted: "#5C6584",
   mutedLight: "#8E96B3",
@@ -1391,7 +1391,7 @@ export default function SogecaDashboard() {
               color: tab === "caexercice" ? "#FFFFFF" : "#AEB8D4",
               borderBottom: tab === "caexercice" ? `2px solid ${C.gold}` : "2px solid transparent",
             }}>
-            <TrendingUp size={14} /> CA théorique + CA au 30/06/2027
+            <TrendingUp size={14} /> CA au 30/06/2027
           </button>
           </button>
           <button onClick={() => goToTab("sorties")}
@@ -1649,7 +1649,7 @@ export default function SogecaDashboard() {
       <main className="mx-auto max-w-6xl px-5 py-6 sm:px-8">
         <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
           <div>
-            <h2 className="text-[16px] font-semibold" style={{ color: C.text }}>CA théorique &amp; CA au 30 juin 2027</h2>
+            <h2 className="text-[16px] font-semibold" style={{ color: C.text }}>CA au 30 juin 2027</h2>
             <p className="text-[12.5px]" style={{ color: C.muted }}>
               CA théorique = honoraires annuels du portefeuille actif. CA au 30/06/2027 = CA théorique + honoraires encore facturés aux clients sortants sur l'exercice juil-26 → juin-27 (mensualités jusqu'à la fin de facturation, frais de dossier et juridique seulement si leur clôture tombe dans la période facturée).
             </p>
