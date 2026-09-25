@@ -635,6 +635,20 @@ export default function SogecaDashboard() {
   const [savingCreances, setSavingCreances] = useState(false);
   const [dettes, setDettes] = useState(null);
   const [savingDettes, setSavingDettes] = useState(false);
+  const [caParams, setCaParams] = useState({ finFacturation: "2026-12" });
+  useEffect(() => {
+    (async () => {
+      try {
+        const res = await storageGet("sogeca-ca-params");
+        if (res) setCaParams(res);
+      } catch (e) {}
+    })();
+  }, []);
+  const updateFinFacturation = async (value) => {
+    const next = { ...caParams, finFacturation: value };
+    setCaParams(next);
+    try { await storageSet("sogeca-ca-params", next); } catch (e) {}
+  };
   const PAGE_SIZE = 20;
 
   const loadClients = useCallback(async (isPoll) => {
@@ -1105,6 +1119,54 @@ export default function SogecaDashboard() {
       soldeMin, departCourant, departCAT, departExcedPro, totalCreances, totalDettes,
     };
   }, [tresorerie, globalStats.totalCA, atterrissage.monthlyTotals, totalPrimes, creances, dettes]);
+    const MOIS_COURTS = ["janv.", "févr.", "mars", "avr.", "mai", "juin", "juil.", "août", "sept.", "oct.", "nov.", "déc."];
+  const caExercice = useMemo(() => {
+    const idx = (ym) => { const [y, m] = String(ym).split("-").map(Number); return y * 12 + (m - 1); };
+    const start = idx(MONTHS[0]);
+    const end = idx(MONTHS[MONTHS.length - 1]);
+    const finParam = /^\d{4}-\d{2}$/.test(caParams?.finFacturation || "") ? caParams.finFacturation : "2026-12";
+    const monthlySortants = MONTHS.map(() => 0);
+    const bySiteSortants = { DAX: 0, MIMIZAN: 0 };
+    const lignes = departed.map((c) => {
+      const annuelMensualise = n(c.honoCompta) + n(c.honoCWE) + n(c.honoOrga);
+      const annuelPonctuel = n(c.fraisDoss) + n(c.honoJuridique);
+      const sortie = /^\d{4}-\d{2}$/.test(c.dateSortie || "") ? c.dateSortie : null;
+      if (sortie && idx(sortie) < start) {
+        return { ...c, exclu: true, mois: 0, mensualise: 0, ponctuel: 0, retenu: 0, clotureIncluse: false };
+      }
+      let finIdx = idx(finParam);
+      if (sortie && idx(sortie) > finIdx) finIdx = idx(sortie);
+      finIdx = Math.min(finIdx, end);
+      const mois = Math.max(0, finIdx - start + 1);
+      const mensualise = (annuelMensualise * mois) / 12;
+      const cl = n(c.cloture);
+      const clotIdx = cl >= 1 && cl <= 12 ? start + ((cl - 7 + 12) % 12) : null;
+      const clotureIncluse = clotIdx !== null && clotIdx <= finIdx;
+      const ponctuel = clotureIncluse ? annuelPonctuel : 0;
+      MONTHS.forEach((_, i) => {
+        if (start + i <= finIdx) monthlySortants[i] += annuelMensualise / 12;
+        if (clotureIncluse && start + i === clotIdx) monthlySortants[i] += ponctuel;
+      });
+      const retenu = mensualise + ponctuel;
+      if (c.site === "DAX" || c.site === "MIMIZAN") bySiteSortants[c.site] += retenu;
+      return { ...c, exclu: false, mois, mensualise, ponctuel, retenu, clotureIncluse };
+    });
+    const retenus = lignes.filter((l) => !l.exclu);
+    const totalSortants = retenus.reduce((s, l) => s + l.retenu, 0);
+    const annuelSortants = retenus.reduce((s, l) => s + l.total, 0);
+    const caTheorique = globalStats.totalCA;
+    const monthly = MONTHS.map((m, i) => ({
+      label: MONTH_LABELS[m],
+      actifs: Math.round(caTheorique / 12),
+      sortants: Math.round(monthlySortants[i]),
+    }));
+    return {
+      lignes, retenus, totalSortants, annuelSortants,
+      manqueAGagner: annuelSortants - totalSortants,
+      caTheorique, caAu30Juin: caTheorique + totalSortants,
+      bySiteSortants, monthly, finParam,
+    };
+  }, [departed, globalStats.totalCA, caParams]);
 
 
   /* ---- Table filtrée ---- */
@@ -1323,6 +1385,14 @@ export default function SogecaDashboard() {
               borderBottom: tab === "dashboard" ? `2px solid ${C.gold}` : "2px solid transparent",
             }}>
             <LayoutDashboard size={14} /> Tableau de bord
+                      <button onClick={() => goToTab("caexercice")}
+            className="flex items-center gap-1.5 px-4 py-2.5 text-[13px] font-medium"
+            style={{
+              color: tab === "caexercice" ? "#FFFFFF" : "#AEB8D4",
+              borderBottom: tab === "caexercice" ? `2px solid ${C.gold}` : "2px solid transparent",
+            }}>
+            <TrendingUp size={14} /> CA théorique + CA au 30/06/2027
+          </button>
           </button>
           <button onClick={() => goToTab("sorties")}
             className="flex items-center gap-1.5 px-4 py-2.5 text-[13px] font-medium"
@@ -1575,7 +1645,103 @@ export default function SogecaDashboard() {
         </div>
       </main>
       )}
+      {tab === "caexercice" && (
+      <main className="mx-auto max-w-6xl px-5 py-6 sm:px-8">
+        <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
+          <div>
+            <h2 className="text-[16px] font-semibold" style={{ color: C.text }}>CA théorique &amp; CA au 30 juin 2027</h2>
+            <p className="text-[12.5px]" style={{ color: C.muted }}>
+              CA théorique = honoraires annuels du portefeuille actif. CA au 30/06/2027 = CA théorique + honoraires encore facturés aux clients sortants sur l'exercice juil-26 → juin-27 (mensualités jusqu'à la fin de facturation, frais de dossier et juridique seulement si leur clôture tombe dans la période facturée).
+            </p>
+          </div>
+          <div>
+            <label className="mb-1 block text-[12px] font-medium" style={{ color: C.muted }}>Fin de facturation des sortants</label>
+            <input type="month" value={caExercice.finParam} onChange={(e) => updateFinFacturation(e.target.value)}
+              className="rounded border px-3 py-2 text-[13.5px] outline-none" style={{ borderColor: C.border, background: C.surface, color: C.text }} />
+          </div>
+        </div>
 
+        <div className="mb-4 grid grid-cols-1 gap-3 sm:grid-cols-4">
+          <KpiCard icon={Wallet} label="CA théorique" value={eurK(caExercice.caTheorique)}
+            sub={`${globalStats.totalDossiers} clients actifs · hors ${eur(pipeline.caProspects)} prospects`} />
+          <KpiCard icon={LogOut} label={`Sortants facturés jusqu'à ${MONTH_LABELS[caExercice.finParam] || caExercice.finParam}`}
+            value={eurK(caExercice.totalSortants)} sub={`${caExercice.retenus.length} client(s) sortant(s)`} accent={C.danger} />
+          <KpiCard icon={TrendingUp} label="CA au 30/06/2027" value={eurK(caExercice.caAu30Juin)} sub={eur(caExercice.caAu30Juin)} accent={C.gold} />
+          <KpiCard icon={UserMinus} label="Manque à gagner sortants" value={eurK(caExercice.manqueAGagner)}
+            sub={`sur ${eur(caExercice.annuelSortants)} de CA annuel perdu`} accent={C.danger} />
+        </div>
+
+        <div className="mb-6 grid grid-cols-1 gap-3 sm:grid-cols-2">
+          {[["DAX", C.dax], ["MIMIZAN", C.mimizan]].map(([site, color]) => (
+            <div key={site} className="rounded-md p-4" style={{ background: C.surface, border: `1px solid ${C.border}` }}>
+              <p className="mb-2 flex items-center gap-1.5 text-[12.5px] font-semibold" style={{ color }}>
+                <span className="inline-block h-2.5 w-2.5 rounded-full" style={{ background: color }} /> SOGECA {site}
+              </p>
+              <div className="flex justify-between text-[13px]" style={{ color: C.muted }}>
+                <span>CA théorique</span><span className="tabular-nums" style={{ color: C.text }}>{eur(globalStats.bySite[site])}</span>
+              </div>
+              <div className="flex justify-between text-[13px]" style={{ color: C.muted }}>
+                <span>+ sortants encore facturés</span><span className="tabular-nums" style={{ color: C.text }}>{eur(caExercice.bySiteSortants[site])}</span>
+              </div>
+              <div className="mt-1.5 flex justify-between border-t pt-1.5 text-[13.5px] font-semibold" style={{ borderColor: C.border, color: C.text }}>
+                <span>CA au 30/06/2027</span><span className="tabular-nums">{eur(globalStats.bySite[site] + caExercice.bySiteSortants[site])}</span>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <div className="mb-6 rounded-md p-4" style={{ background: C.surface, border: `1px solid ${C.border}` }}>
+          <p className="mb-1 text-[12.5px] font-semibold" style={{ color: C.text }}>CA mensuel — juil. 2026 à juin 2027</p>
+          <p className="mb-3 text-[11px]" style={{ color: C.mutedLight }}>Portefeuille actif lissé sur 12 mois (bleu) + clients sortants (menthe).</p>
+          <div style={{ width: "100%", height: 200 }}>
+            <ResponsiveContainer>
+              <BarChart data={caExercice.monthly} margin={{ left: 0, right: 8, top: 4, bottom: 4 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke={C.border} vertical={false} />
+                <XAxis dataKey="label" tick={{ fontSize: 10.5, fill: C.mutedLight }} axisLine={{ stroke: C.border }} tickLine={false} />
+                <YAxis tickFormatter={(v) => eurK(v)} tick={{ fontSize: 10.5, fill: C.mutedLight }} axisLine={{ stroke: C.border }} tickLine={false} width={55} />
+                <Tooltip formatter={(v) => eur(v)} contentStyle={{ fontSize: 12, borderRadius: 6, border: `1px solid ${C.border}` }} />
+                <Bar dataKey="actifs" stackId="ca" fill={C.navy} name="Portefeuille actif" />
+                <Bar dataKey="sortants" stackId="ca" fill={C.gold} radius={[3, 3, 0, 0]} name="Clients sortants" />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+
+        <p className="mb-3 text-[12.5px] font-semibold" style={{ color: C.text }}>Détail des clients sortants</p>
+        <div className="overflow-x-auto rounded-md" style={{ background: C.surface, border: `1px solid ${C.border}` }}>
+          <table className="w-full min-w-[980px] border-collapse">
+            <thead>
+              <tr style={{ background: C.bg, borderBottom: `1px solid ${C.border}` }}>
+                {["Raison sociale", "Collaborateur", "Site", "Sortie", "Clôture", "Mois facturés", "Mensualités", "Bilan / juridique", "Retenu 26-27", "CA annuel"].map((h, i) => (
+                  <th key={h} className={`px-3 py-2.5 text-[11px] font-semibold uppercase tracking-wide ${i >= 5 ? "text-right" : "text-left"}`} style={{ color: C.muted }}>{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {caExercice.lignes.map((l) => (
+                <tr key={l.id} style={{ borderBottom: `1px solid ${C.bg}`, opacity: l.exclu ? 0.45 : 1 }}>
+                  <td className="px-3 py-2 text-[13px]" style={{ color: C.text }}>{l.raison}</td>
+                  <td className="px-3 py-2 text-[12.5px]" style={{ color: C.muted }}>{l.collaborateur || "—"}</td>
+                  <td className="px-3 py-2 text-[12px]" style={{ color: l.site === "MIMIZAN" ? C.mimizan : C.navy }}>{l.site}</td>
+                  <td className="px-3 py-2 text-[12.5px] tabular-nums" style={{ color: C.muted }}>{l.dateSortie || "—"}</td>
+                  <td className="px-3 py-2 text-[12.5px]" style={{ color: C.muted }}>{n(l.cloture) >= 1 && n(l.cloture) <= 12 ? MOIS_COURTS[n(l.cloture) - 1] : "—"}</td>
+                  <td className="px-3 py-2 text-right tabular-nums text-[12.5px]" style={{ color: C.muted }}>{l.exclu ? "sortie avant juil-26" : `${l.mois}/12`}</td>
+                  <td className="px-3 py-2 text-right tabular-nums text-[12.5px]" style={{ color: C.text }}>{eur(l.mensualise)}</td>
+                  <td className="px-3 py-2 text-right tabular-nums text-[12.5px]" style={{ color: l.clotureIncluse ? C.success : C.mutedLight }}>{l.clotureIncluse ? eur(l.ponctuel) : "non"}</td>
+                  <td className="px-3 py-2 text-right tabular-nums text-[13px] font-semibold" style={{ color: C.text }}>{eur(l.retenu)}</td>
+                  <td className="px-3 py-2 text-right tabular-nums text-[12.5px]" style={{ color: C.muted }}>{eur(l.total)}</td>
+                </tr>
+              ))}
+              {caExercice.lignes.length === 0 && (
+                <tr><td colSpan={10} className="px-3 py-10 text-center text-[13.5px]" style={{ color: C.mutedLight }}>
+                  Aucun client sorti. Marquez un client comme sortant (icône corbeille dans le tableau de bord) pour qu'il apparaisse ici.
+                </td></tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </main>
+      )}
       {tab === "sorties" && (
       <main className="mx-auto max-w-6xl px-5 py-6 sm:px-8">
         <div className="mb-4">
