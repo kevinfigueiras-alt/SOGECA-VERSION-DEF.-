@@ -1160,19 +1160,24 @@ export default function SogecaDashboard() {
     const retenus = lignes.filter((l) => !l.exclu);
     const totalSortants = retenus.reduce((s, l) => s + l.retenu, 0);
     const annuelSortants = retenus.reduce((s, l) => s + l.total, 0);
-    const caTheorique = globalStats.totalCA;
+        const caTheorique = globalStats.totalCA;
+    const caProspects = pipeline.caProspects;
+    const bySiteProspects = { DAX: n(pipeline.bySite.DAX), MIMIZAN: n(pipeline.bySite.MIMIZAN) };
+    const prospectsNonAffectes = n(pipeline.bySite["Non affecté"]);
     const monthly = MONTHS.map((m, i) => ({
       label: MONTH_LABELS[m],
       actifs: Math.round(caTheorique / 12),
       sortants: Math.round(monthlySortants[i]),
+      prospects: Math.round(caProspects / 12),
     }));
     return {
       lignes, retenus, totalSortants, annuelSortants,
       manqueAGagner: annuelSortants - totalSortants,
-      caTheorique, caAu30Juin: caTheorique + totalSortants,
+      caTheorique, caProspects, bySiteProspects, prospectsNonAffectes,
+      caAu30Juin: caTheorique + totalSortants + caProspects,
       bySiteSortants, monthly, finParam,
     };
-  }, [departed, globalStats.totalCA, caParams]);
+  }, [departed, globalStats.totalCA, caParams, pipeline.caProspects, pipeline.bySite]);
 
 
   /* ---- Table filtrée ---- */
@@ -1667,11 +1672,11 @@ export default function SogecaDashboard() {
         </div>
 
         <div className="mb-4 grid grid-cols-1 gap-3 sm:grid-cols-4">
-          <KpiCard icon={Wallet} label="CA théorique" value={eurK(caExercice.caTheorique)}
-            sub={`${globalStats.totalDossiers} clients actifs · hors ${eur(pipeline.caProspects)} prospects`} />
+                    <KpiCard icon={Wallet} label="CA théorique" value={eurK(caExercice.caTheorique)}
+            sub={`${globalStats.totalDossiers} clients actifs`} />
           <KpiCard icon={LogOut} label={`Sortants facturés jusqu'à ${MONTH_LABELS[caExercice.finParam] || caExercice.finParam}`}
             value={eurK(caExercice.totalSortants)} sub={`${caExercice.retenus.length} client(s) sortant(s)`} accent={C.danger} />
-          <KpiCard icon={TrendingUp} label="CA au 30/06/2027" value={eurK(caExercice.caAu30Juin)} sub={eur(caExercice.caAu30Juin)} accent={C.gold} />
+                    <KpiCard icon={TrendingUp} label="CA au 30/06/2027" value={eurK(caExercice.caAu30Juin)} sub={`dont ${eur(caExercice.caProspects)} de prospects`} accent={C.gold} />
           <KpiCard icon={UserMinus} label="Manque à gagner sortants" value={eurK(caExercice.manqueAGagner)}
             sub={`sur ${eur(caExercice.annuelSortants)} de CA annuel perdu`} accent={C.danger} />
         </div>
@@ -1683,10 +1688,13 @@ export default function SogecaDashboard() {
                 <span className="inline-block h-2.5 w-2.5 rounded-full" style={{ background: color }} /> SOGECA {site}
               </p>
               <div className="flex justify-between text-[13px]" style={{ color: C.muted }}>
-                <span>CA théorique</span><span className="tabular-nums" style={{ color: C.text }}>{eur(globalStats.bySite[site])}</span>
+                <span>+ sortants encore facturés</span><span className="tabular-nums" style={{ color: C.text }}>{eur(caExercice.bySiteSortants[site])}</span>
               </div>
               <div className="flex justify-between text-[13px]" style={{ color: C.muted }}>
-                <span>+ sortants encore facturés</span><span className="tabular-nums" style={{ color: C.text }}>{eur(caExercice.bySiteSortants[site])}</span>
+                <span>+ prospects</span><span className="tabular-nums" style={{ color: C.text }}>{eur(caExercice.bySiteProspects[site])}</span>
+              </div>
+              <div className="mt-1.5 flex justify-between border-t pt-1.5 text-[13.5px] font-semibold" style={{ borderColor: C.border, color: C.text }}>
+                <span>CA au 30/06/2027</span><span className="tabular-nums">{eur(globalStats.bySite[site] + caExercice.bySiteSortants[site] + caExercice.bySiteProspects[site])}</span>
               </div>
               <div className="mt-1.5 flex justify-between border-t pt-1.5 text-[13.5px] font-semibold" style={{ borderColor: C.border, color: C.text }}>
                 <span>CA au 30/06/2027</span><span className="tabular-nums">{eur(globalStats.bySite[site] + caExercice.bySiteSortants[site])}</span>
@@ -1697,7 +1705,7 @@ export default function SogecaDashboard() {
 
         <div className="mb-6 rounded-md p-4" style={{ background: C.surface, border: `1px solid ${C.border}` }}>
           <p className="mb-1 text-[12.5px] font-semibold" style={{ color: C.text }}>CA mensuel — juil. 2026 à juin 2027</p>
-          <p className="mb-3 text-[11px]" style={{ color: C.mutedLight }}>Portefeuille actif lissé sur 12 mois (bleu) + clients sortants (menthe).</p>
+          <p className="mb-3 text-[11px]" style={{ color: C.mutedLight }}>Portefeuille actif lissé sur 12 mois (bleu) + clients sortants (menthe) + prospects (vert).</p>
           <div style={{ width: "100%", height: 200 }}>
             <ResponsiveContainer>
               <BarChart data={caExercice.monthly} margin={{ left: 0, right: 8, top: 4, bottom: 4 }}>
@@ -1706,7 +1714,8 @@ export default function SogecaDashboard() {
                 <YAxis tickFormatter={(v) => eurK(v)} tick={{ fontSize: 10.5, fill: C.mutedLight }} axisLine={{ stroke: C.border }} tickLine={false} width={55} />
                 <Tooltip formatter={(v) => eur(v)} contentStyle={{ fontSize: 12, borderRadius: 6, border: `1px solid ${C.border}` }} />
                 <Bar dataKey="actifs" stackId="ca" fill={C.navy} name="Portefeuille actif" />
-                <Bar dataKey="sortants" stackId="ca" fill={C.gold} radius={[3, 3, 0, 0]} name="Clients sortants" />
+                <Bar dataKey="sortants" stackId="ca" fill={C.gold} name="Clients sortants" />
+                <Bar dataKey="prospects" stackId="ca" fill={C.mimizan} radius={[3, 3, 0, 0]} name="Prospects" />
               </BarChart>
             </ResponsiveContainer>
           </div>
