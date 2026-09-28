@@ -888,7 +888,9 @@ export default function SogecaDashboard() {
     () => enriched.filter((c) => c.site === "DAX").reduce((s, c) => s + n(c.honoCWE), 0),
     [enriched]
   );
-  const cwePennylaneNet = Math.max(0, CWE_PENNYLANE_DAX.total - cweDejaFactureDAX);
+    const cwePennylaneNet = Math.max(0, CWE_PENNYLANE_DAX.total - cweDejaFactureDAX);
+
+  const siteChartData = [
     { name: "SOGECA DAX", value: Math.round(globalStats.bySite.DAX), color: C.dax },
     { name: "SOGECA MIMIZAN", value: Math.round(globalStats.bySite.MIMIZAN), color: C.mimizan },
   ];
