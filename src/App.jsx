@@ -1384,15 +1384,15 @@ export default function SogecaDashboard() {
               color: tab === "dashboard" ? "#FFFFFF" : "#AEB8D4",
               borderBottom: tab === "dashboard" ? `2px solid ${C.gold}` : "2px solid transparent",
             }}>
-            <LayoutDashboard size={14} /> Chiffre d'affaires Théorique 
-                      <button onClick={() => goToTab("caexercice")}
+            <LayoutDashboard size={14} /> Chiffre d'affaires Théorique
+          </button>
+          <button onClick={() => goToTab("caexercice")}
             className="flex items-center gap-1.5 px-4 py-2.5 text-[13px] font-medium"
             style={{
               color: tab === "caexercice" ? "#FFFFFF" : "#AEB8D4",
               borderBottom: tab === "caexercice" ? `2px solid ${C.gold}` : "2px solid transparent",
             }}>
             <TrendingUp size={14} /> CA au 30/06/2027
-          </button>
           </button>
           <button onClick={() => goToTab("sorties")}
             className="flex items-center gap-1.5 px-4 py-2.5 text-[13px] font-medium"
