@@ -981,7 +981,7 @@ export default function SogecaDashboard() {
     const pcaModeTheorique = pca?.mode === "theorique";
     const pcaCloture = pcaModeTheorique ? pcaTheorique.total : (tauxCloture / 100) * caApresExtourne;
     const pcaNet = pcaOuverture - pcaCloture;
-    const cwePennylane = includeCwePennylane ? CWE_PENNYLANE_DAX.total : 0;
+    const cwePennylane = includeCwePennylane ? cwePennylaneNet : 0;
     const totalCA = totalCABase + cwePennylane;
     const caDAX = caDAXBase + cwePennylane;
     const caAjuste = totalCA + pcaNet;
@@ -998,7 +998,7 @@ export default function SogecaDashboard() {
       value: Math.round(list.reduce((s, c) => s + n(c.months?.[m]), 0)),
     }));
     return { totalCharges, chargesDAX, chargesMIMIZAN, chargesCommun, resultatDAX, resultatMIMIZAN, resultatNet, resultatNetAvantPrimes, tauxMarge, monthlyTotals, pcaOuverture, pcaCloture, pcaNet, caAjuste, caApresExtourne, tauxCloture, cwePennylane, pcaModeTheorique };
-  }, [charges, globalStats, pca, totalPrimes, includeCwePennylane, pcaTheorique]);
+    }, [charges, globalStats, pca, totalPrimes, includeCwePennylane, pcaTheorique, cwePennylaneNet]);
 
   const pipeline = useMemo(() => {
     const list = prospects || [];
@@ -2017,10 +2017,20 @@ export default function SogecaDashboard() {
               </div>
             ))}
           </div>
-          <div className="mt-3 flex items-center justify-between rounded px-3 py-2" style={{ background: includeCwePennylane ? "#E6F1EB" : C.bg }}>
-            <span className="text-[12.5px] font-medium" style={{ color: C.text }}>Total potentiel</span>
+                    <div className="mt-3 rounded px-3 py-2" style={{ background: C.bg }}>
+            <div className="flex items-center justify-between text-[12.5px]" style={{ color: C.muted }}>
+              <span>Potentiel brut (document)</span>
+              <span className="tabular-nums" style={{ color: C.text }}>{eur(CWE_PENNYLANE_DAX.total)}</span>
+            </div>
+            <div className="flex items-center justify-between text-[12.5px]" style={{ color: C.muted }}>
+              <span>− CWE déjà facturée (clients actifs DAX)</span>
+              <span className="tabular-nums" style={{ color: C.danger }}>−{eur(cweDejaFactureDAX)}</span>
+            </div>
+          </div>
+          <div className="mt-2 flex items-center justify-between rounded px-3 py-2" style={{ background: includeCwePennylane ? "#E6F1EB" : C.bg }}>
+            <span className="text-[12.5px] font-medium" style={{ color: C.text }}>Potentiel net supplémentaire</span>
             <span className="tabular-nums text-[15px] font-semibold" style={{ color: includeCwePennylane ? C.success : C.text }}>
-              {eur(CWE_PENNYLANE_DAX.total)} {includeCwePennylane && "· inclus dans le CA ajusté"}
+              {eur(cwePennylaneNet)} {includeCwePennylane && "· inclus dans le CA ajusté"}
             </span>
           </div>
           <p className="mt-2 text-[10.5px]" style={{ color: C.mutedLight }}>
