@@ -630,7 +630,7 @@ export default function SogecaDashboard() {
   const [savingPrimes, setSavingPrimes] = useState(false);
   const [tresorerie, setTresorerie] = useState(null);
   const [savingTresorerie, setSavingTresorerie] = useState(false);
-  const [includeCwePennylane, setIncludeCwePennylane] = useState(false);
+  const [includeCwePennylane, setIncludeCwePennylane] = useState(true);
   const [creances, setCreances] = useState(null);
   const [savingCreances, setSavingCreances] = useState(false);
   const [dettes, setDettes] = useState(null);
